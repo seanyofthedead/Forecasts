@@ -14,6 +14,7 @@ from sklearn.metrics import mean_absolute_percentage_error
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from scipy import stats
+from scipy.special import inv_boxcox
 import statsmodels.api as sm
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -132,15 +133,23 @@ def apply_transformation(y, transform_type):
     elif transform_type == 'log1p':
         return np.log1p(np.maximum(y, 0)), lambda x: np.expm1(np.maximum(x, 0))
     elif transform_type == 'boxcox':
-        y_positive = np.maximum(y, 1e-6)  # Ensure positive
+        epsilon = 1e-6
+        y_positive = np.maximum(y, epsilon)  # Ensure positive
         if len(y_positive) > 1:
             try:
                 transformed, lambda_val = stats.boxcox(y_positive)
-                return transformed, lambda x: np.maximum(stats.boxcox(x, lambda_val), 1e-6)
+
+                def inverse_boxcox(x):
+                    x = np.asarray(x)
+                    x = np.where(np.isfinite(x), x, 0.0)
+                    original = inv_boxcox(x, lambda_val)
+                    return np.maximum(original, epsilon)
+
+                return transformed, inverse_boxcox
             except:
-                return np.log1p(y_positive), lambda x: np.expm1(np.maximum(x, 0))
+                return np.log1p(y_positive), lambda x: np.maximum(np.expm1(np.maximum(x, 0)), epsilon)
         else:
-            return np.log1p(y_positive), lambda x: np.expm1(np.maximum(x, 0))
+            return np.log1p(y_positive), lambda x: np.maximum(np.expm1(np.maximum(x, 0)), epsilon)
     else:
         return y, lambda x: x
 
