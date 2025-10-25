@@ -615,7 +615,7 @@ def neural_network_model(train_data, value_col, count_col, test_idx):
 
 def main():
     parser = argparse.ArgumentParser(description='Time Series Forecasting with Multiple Models')
-    parser.add_argument('--input', default='psuedo data.csv', help='Path to input CSV file')
+    parser.add_argument('--input', default='pseudo data.csv', help='Path to input CSV file')
     parser.add_argument('--date-col', default='Date', help='Date column name')
     parser.add_argument('--value-col', default='Total Cost', help='Value column name')
     parser.add_argument('--count-col', default='Inspection/Audit/Review Count', help='Count column name')
