@@ -99,7 +99,7 @@ def clean_data(df, date_col, value_col, count_col):
     if count_col and count_col in df.columns:
         df[count_col] = df[count_col].apply(clean_currency)
     
-    # Clean additional cost columns for rolling averages
+    # Clean additional cost columns for fiscal year cumulative means
     cost_columns = {
         'Federal Labor Costs': 'Federal Labor Costs',
         'Contract Labor Costs': 'Contract Labor Costs', 
@@ -143,23 +143,23 @@ def clean_data(df, date_col, value_col, count_col):
     if count_col and count_col in df_monthly.columns:
         df_monthly[count_col] = df_monthly[count_col].interpolate(method='linear')
     
-    # Add fiscal year rolling averages
+    # Add fiscal year cumulative means
     df_monthly = add_fiscal_year_rolling_averages(df_monthly, cost_columns)
     
     return df_monthly, value_col, count_col
 
 
 def add_fiscal_year_rolling_averages(df, cost_columns):
-    """Add monthly rolling averages that reset at fiscal year start (October)."""
+    """Add fiscal year-to-date cumulative means that reset at the start of each fiscal year (October)."""
     # Create fiscal year groups (October to September)
     df['fiscal_year'] = df.index.to_series().apply(
         lambda x: x.year if x.month >= 10 else x.year - 1
     )
     
-    # Add rolling averages for each cost category
+    # Add cumulative means for each cost category
     for col_name, col_key in cost_columns.items():
         if col_key in df.columns:
-            # Calculate rolling average within each fiscal year
+            # Calculate the fiscal year-to-date mean within each fiscal year
             df[f'{col_name}_FY_RollingAvg'] = (
                 df.groupby('fiscal_year')[col_key]
                 .expanding()
@@ -201,7 +201,7 @@ def create_features(df, value_col, count_col, max_lag=12):
         if window <= max_lag:
             features_df[f'y_rolling_{window}'] = df[value_col].rolling(window=window).mean()
     
-    # Add fiscal year rolling averages as features
+    # Add fiscal year cumulative mean features
     fy_rolling_cols = [col for col in df.columns if col.endswith('_FY_RollingAvg')]
     for col in fy_rolling_cols:
         features_df[col] = df[col]
@@ -267,7 +267,7 @@ def prophet_model(train_data, value_col, count_col, test_idx):
         # Rename columns properly
         df_prophet = df_prophet.rename(columns={df_prophet.columns[0]: 'ds', value_col: 'y'})
         
-        # Keep only ds, y, and count columns (exclude fiscal year rolling averages as they are endogenous)
+        # Keep only ds, y, and count columns (exclude fiscal year cumulative means as they are endogenous)
         keep_cols = ['ds', 'y']
         if count_col and count_col in df_prophet.columns:
             keep_cols.append(count_col)
@@ -313,7 +313,7 @@ def sarimax_model(train_data, value_col, count_col, test_idx):
         # Prepare data
         y = train_data[value_col].dropna()
         
-        # Add exogenous variables if count is available (exclude fiscal year rolling averages as they are endogenous)
+        # Add exogenous variables if count is available (exclude fiscal year cumulative means as they are endogenous)
         exog = None
         if count_col and count_col in train_data.columns:
             count_data = train_data[count_col].dropna()
@@ -465,7 +465,7 @@ def autoarima_model(train_data, value_col, count_col, test_idx):
             print("AutoARIMA: Insufficient data for seasonal model")
             return np.nan
         
-        # Add exogenous variables if count is available (exclude fiscal year rolling averages as they are endogenous)
+        # Add exogenous variables if count is available (exclude fiscal year cumulative means as they are endogenous)
         exog = None
         if count_col and count_col in train_data.columns:
             count_data = train_data[count_col].dropna()
