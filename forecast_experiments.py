@@ -673,7 +673,7 @@ def create_model_variant_name(config):
 
 def main():
     parser = argparse.ArgumentParser(description='Forecast Experiments')
-    parser.add_argument('--input', default='psuedo data.csv', help='Path to input CSV file')
+    parser.add_argument('--input', default='pseudo data.csv', help='Path to input CSV file')
     parser.add_argument('--date-col', default='Date', help='Date column name')
     parser.add_argument('--value-col', default='Total Cost', help='Value column name')
     parser.add_argument('--count-col', default='Inspection/Audit/Review Count', help='Count column name')
